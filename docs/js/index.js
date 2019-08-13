@@ -1,8 +1,79 @@
 
 // marked.setOptions({ langPrefix: '' });
+class Time {
+  constructor(hours, minutes) {
+    this.hours = hours;
+    this.minutes = minutes;
+    this.totalMinutes = hours * 60 + minutes;
+  }
+
+  static createFromTotalMinutes(m) {
+    return Time(Math.floor(m / 60), m % 60);
+  }
+
+  static parse(text) {
+    if(text.indexOf(':') != -1) {
+      let p = text.split(':').map(v => parseInt(v));
+      return new Time(p[0], p[1]);
+    }
+    if(text.indexOf('t') != -1) {
+      return Time.createFromTotalMinutes(parseInt(text.split('t')[0]) * 30);
+    }
+    if(text.indexOf('h') != -1) {
+      return new Time(parseInt(text.split('h')[0]) * 60, 0);
+    }
+    return Time.createFromTotalMinutes(parseInt(text));
+  }
+}
+
+class Task {
+  constructor(title, estimateMinute, startTime, endTime) {
+    this.title = title;
+    this.estimateMinute = estimateMinute;
+    this.startTime = startTime;
+    this.endTime = endTime;
+    this.isTask = true;
+    this.isSchedule = false;
+  }
+
+  static todo(title, estimateMinute) {
+    return new Task(title, estimateMinute, null, null);
+  }
+  static doing(title, estimateMinute, startTime) {
+    return new Task(title, estimateMinute, startTime, null);
+  }
+  static done(title, estimateMinute, startTime, endTime) {
+    return new Task(title, estimateMinute, startTime, endTime);
+  }
+}
+
+class Schedule {
+  constructor(title, startTime, endTime, isDone) {
+    this.title = title;
+    this.startTime = startTime;
+    this.endTime = endTime;
+    this.isDone = isDone;
+    this.isTask = false;
+    this.isSchedule = true;
+  }
+}
+
+var parse = function(text) {
+  var args = text.split('~~').join('').split('|');
+  var title = args[0].trim();
+  var ary = args[0].split(' ').map(v => v.trim()).filter(v => v.length > 0);
+  if(ary[0].indexOf('-')) {
+
+  } else {
+
+  }
+  
+}
 
 var renderer = new marked.Renderer();
-var markdownData = {};
+var markdownData = { 
+  taskParseNum: 0 // 0:初期 1:タスクパース中 2:パース完了
+};
 renderer.code = function (code, lang) {
   if(lang == 'html-exec') {
     return code;
@@ -13,11 +84,47 @@ renderer.code = function (code, lang) {
   return '<pre><code>'+hljs.highlightAuto(code).value+'</code></pre>';
 };
 
+renderer.defaultParagraph = renderer.paragraph;
 renderer.paragraph = function(text) {
   console.log('paragraph', text);
-  return text;
+
+  return renderer.defaultParagraph(text);
 }
 
+renderer.defaultHeading = renderer.heading;
+renderer.heading = function(text, level, raw, slugger) {
+  if(markdownData.taskParseNum == 1) {
+    markdownData.taskParseNum = 2;
+  }
+
+  return renderer.defaultHeading(text, level, raw, slugger);
+}
+
+renderer.defaultList = renderer.list;
+renderer.list = function(body, ordered, start) {
+  return renderer.defaultList(body, ordered, start);
+}
+
+renderer.defaultListitem = renderer.listitem;
+renderer.listitem = function(text, task, checked) {
+  if(markdownData.taskParseNum == 0) {
+    markdownData.taskParseNum = 1;
+  }
+  if(markdownData.taskParseNum < 2) {
+    if(text.indexOf('|') != -1) {
+      try {
+        return renderer.defaultListitem(`task ${text}`, task, checked)
+      } catch(e) {
+        return renderer.defaultListitem(text, task, checked)
+      }
+      
+    }
+  }
+
+  return renderer.defaultListitem(text, task, checked)
+}
+
+renderer.defaultLink = renderer.link;
 renderer.link = function(href, title, text) {
   console.log(href, title, text);
   if(href == '$d') {// 日付
@@ -37,13 +144,13 @@ renderer.link = function(href, title, text) {
     markdownData.link[text] = href;
     return `<sup><a href="#${text}" title="${href}">${text.slice(1)}</a></sup>`
   }
-  return `<a href="${href}">${text}</a>`
+  return renderer.defaultLink(href, title, text);
 }
 
-renderer.image = function(href, title, text) {
-  console.log(href, title, text);
-  return `<img src="${href}" />`
-}
+// renderer.image = function(href, title, text) {
+//   console.log(href, title, text);
+//   return `<img src="${href}" />`
+// }
 
 marked.setOptions({
   renderer: renderer
@@ -151,7 +258,7 @@ document.querySelector('#editor').addEventListener('keyup', () => {
 refresh();
 
 function refresh() {
-  markdownData = {};
+  markdownData = { taskParseNum: 0 };
   var markdownText = document.querySelector('#editor').value.trim();
   if(markdownText.length == 0) {
     markdownText = document.querySelector('#editor').placeholder;
