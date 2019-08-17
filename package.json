@@ -1,0 +1,26 @@
+{
+  "devDependencies": {
+    "cssnano": "^4.1.10",
+    "typescript": "^3.3.3333"
+  },
+  "name": "markdown-todo",
+  "description": "markdown形式で管理するTODOリスト",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "marked": "^0.7.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://naosim@github.com/naosim/markdown-todo.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/naosim/markdown-todo/issues"
+  },
+  "homepage": "https://github.com/naosim/markdown-todo#readme"
+}

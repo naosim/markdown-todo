@@ -1,0 +1,24 @@
+textarea {
+  resize: vertical;
+  width: 100%;
+  min-height: 500px;
+  font-family: Consolas, 'Courier New', Courier, Monaco, monospace;
+  padding: 0px 4px;
+}
+
+.row {
+  height: 600px;
+}
+.row>div, #result, #editor {
+  height: 100%;
+}
+
+nav {
+  position: fixed; 
+  top: 0px; 
+  left: 0px; 
+  color: white; 
+  background: #888; 
+  width: 100%; 
+  padding: 4px 38px;
+}
