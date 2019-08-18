@@ -1,27 +1,37 @@
 declare function require(x: string): any;
 const marked = require('marked')
-// declare var mermaid: any;
-declare var hljs: any;
 
-var markdownData: {taskParseNum:number, todoOrSchedules: markdowntodo.TodoOrSchedule[]} = { 
-  taskParseNum: 0, // 0:初期 1:タスクパース中 2:パース完了
-  todoOrSchedules: [],
-};
 
 module markdowntodo {
-
+  var markdownData: {taskParseNum:number, todoOrSchedules: markdowntodo.TodoOrSchedule[]} = { 
+    taskParseNum: 0, // 0:初期 1:タスクパース中 2:パース完了
+    todoOrSchedules: [],
+  };
 
   // marked.setOptions({ langPrefix: '' });
   export class Time {
-    private hours: number;
-    private minutes: number;
-    private totalMinutes: number;
+    private _hours: number;
+    private _minutes: number;
+    private _totalMinutes: number;
 
     constructor(hours, minutes) {
-      this.hours = hours;
-      this.minutes = minutes;
-      this.totalMinutes = hours * 60 + minutes;
+      this._hours = hours;
+      this._minutes = minutes;
+      this._totalMinutes = hours * 60 + minutes;
     }
+
+    get hours(): number {
+      return this._hours;
+    }
+
+    get minutes(): number {
+      return this._minutes;
+    }
+
+    get totalMinutes(): number {
+      return this._totalMinutes;
+    }
+
     minus(otherTime) {
       if(this.totalMinutes < otherTime.totalMinutes) {
         return Time.createFromTotalMinutes((this.totalMinutes + 24 * 60) - otherTime.totalMinutes)
@@ -68,7 +78,7 @@ module markdowntodo {
     isSchedule: boolean;
     isDone: boolean;
     estimateTime: Time;
-    state: string
+    state: string;
     constructor(title: string, estimateTime: Time, startTime: Time, endTime: Time) {
       this.title = title;
       this.startTime = startTime;
@@ -201,88 +211,41 @@ module markdowntodo {
     
   }
 
-  var renderer = new marked.Renderer();
-  renderer.code = function (code, lang) {
-    if(lang == 'html-exec') {
-      return code;
-    }
-    if(lang == 'mermaid') {
-      return `<div class="mermaid">${code}</div>`;
-    }
-    return '<pre><code>'+hljs.highlightAuto(code).value+'</code></pre>';
-  };
-
-  renderer.defaultParagraph = renderer.paragraph;
-  renderer.paragraph = function(text) {
-    // console.log('paragraph', text);
-
-    return renderer.defaultParagraph(text);
-  }
-
-  renderer.defaultHeading = renderer.heading;
-  renderer.heading = function(text, level, raw, slugger) {
-    if(markdownData.taskParseNum == 1) {
-      markdownData.taskParseNum = 2;
+  export function createRenderer(renderer: any) {
+    renderer.defaultHeading = renderer.heading;
+    renderer.heading = function(text, level, raw, slugger) {
+      if(markdownData.taskParseNum == 1) {
+        markdownData.taskParseNum = 2;
+      }
+      return renderer.defaultHeading(text, level, raw, slugger);
     }
 
-    return renderer.defaultHeading(text, level, raw, slugger);
-  }
-
-  renderer.defaultList = renderer.list;
-  renderer.list = function(body, ordered, start) {
-    return renderer.defaultList(body, ordered, start);
-  }
-
-  renderer.defaultListitem = renderer.listitem;
-  renderer.listitem = function(text, task, checked) {
-    if(markdownData.taskParseNum == 0) {
-      markdownData.taskParseNum = 1;
-    }
-    if(markdownData.taskParseNum < 2) {
-      if(text.split('//')[0].indexOf('|') != -1) {
-        try {
-          var taskOrSchedule: TodoOrSchedule = parse(text);
-          markdownData.todoOrSchedules.push(taskOrSchedule);
-          return renderer.defaultListitem(text, task, checked)
-        } catch(e) {
-          console.error(e);
-          return renderer.defaultListitem(text, task, checked)
+    renderer.defaultListitem = renderer.listitem;
+    renderer.listitem = function(text, task, checked) {
+      if(markdownData.taskParseNum == 0) {
+        markdownData.taskParseNum = 1;
+      }
+      if(markdownData.taskParseNum < 2) {
+        if(text.split('//')[0].indexOf('|') != -1) {
+          try {
+            var taskOrSchedule: TodoOrSchedule = parse(text);
+            markdownData.todoOrSchedules.push(taskOrSchedule);
+            return renderer.defaultListitem(text, task, checked)
+          } catch(e) {
+            console.error(e);
+            return renderer.defaultListitem(text, task, checked)
+          }
+          
         }
-        
       }
+
+      return renderer.defaultListitem(text, task, checked)
     }
 
-    return renderer.defaultListitem(text, task, checked)
+    return renderer;
   }
 
-  renderer.defaultLink = renderer.link;
-  renderer.link = function(href, title, text) {
-    // console.log(href, title, text);
-    if(href == '$d') {// 日付
-      const d = text.split('/').join('-')
-      return `<time datetime="${d}">${text}</time>`;
-    }
-    if(href == '$eval') {
-      return eval(text);
-    }
-    if(text.indexOf('^$') == 0) {// 変数
-      return href;
-    }
-    if(text.indexOf('^') == 0) {// 脚注
-      if(!markdownData.link) {
-        markdownData.link = {};
-      }
-      markdownData.link[text] = href;
-      return `<sup><a href="#${text}" title="${href}">${text.slice(1)}</a></sup>`
-    }
-    return renderer.defaultLink(href, title, text);
-  }
-
-  // renderer.image = function(href, title, text) {
-  //   console.log(href, title, text);
-  //   return `<img src="${href}" />`
-  // }
-
+  const renderer = createRenderer(new marked.Renderer());
   marked.setOptions({
     renderer: renderer
   });
@@ -309,6 +272,77 @@ module markdowntodo {
       }, 1000) // 入力終了までの待ち時間
     }
   }
+
+  export interface MarkdownTodo {
+    todoOrSchedules: TodoOrSchedule[],
+    summary: {estimate: Time, actual: Time}
+  }
+
+  export function createTaskData(markdownText: string): MarkdownTodo {
+    markdownData = {
+      taskParseNum: 0,
+      todoOrSchedules: [],
+    };
+    marked(markdownText);
+
+    const summary = {
+      estimate: Time.createFromTotalMinutes(markdownData.todoOrSchedules.reduce((memo, v) => memo + v.estimateTime.totalMinutes, 0)),
+      actual: Time.createFromTotalMinutes(markdownData.todoOrSchedules.reduce((memo, v) => memo + v.actualTime.totalMinutes, 0))
+    }
+
+    return {
+      todoOrSchedules: markdownData.todoOrSchedules,
+      summary: summary
+    }
+  }
+}
+
+module view {
+  function refresh() {
+    var markdownText = document.querySelector('#editor').value.trim();
+    if(markdownText.length == 0) {
+      markdownText = document.querySelector('#editor').placeholder;
+    }
+    const taskData = markdowntodo.createTaskData(markdownText);
+    document.querySelector('#result').innerHTML = '<table><tr><th>タイトル</th><th>見積もり</th><th>区分</th><th>開始</th><th>終了</th></tr><tr>' + taskData.todoOrSchedules
+      .filter(v => !v.isDone)
+      .map(v => {
+        const text = [
+          v.title,
+          v.estimateTime ? v.estimateTime.formatedValue() : '',
+          v.isTodo ? 'TODO' : '予定',
+          v.startTime ? v.startTime.formatedValue() : '',
+          v.endTime ? v.endTime.formatedValue() : ''
+        ].filter(v => v !== null).join('</td><td>')
+        return `<td>${text}</td>`
+      }).join('</tr><tr>') + '</tr></table>' + `<h3>残り合計: ${markdowntodo.Time.createFromTotalMinutes(taskData.todoOrSchedules.filter(v => !v.isDone).reduce((memo, v) => memo + v.estimateTime.totalMinutes, 0)).formatedValue()}</h3>`
+  }
+
+  document.querySelector('#editor').addEventListener('keydown', typeTab('  ')/* スペース2つ */);
+  document.querySelector('#editor').addEventListener('keydown', typeEnter());
+
+  var typeEndEventHandler = new markdowntodo.TypeEndEventHandler(refresh);
+  document.querySelector('#editor').addEventListener('keyup', () => {
+    typeEndEventHandler.onKeyup();
+  })
+  // mermaid.initialize({startOnLoad:false})
+  refresh();
+
+
+  function getTime() {
+    return markdowntodo.Time.createFromDate(new Date()).formatedValue();
+  }
+
+  // 時刻表示
+  const timeSpan = document.querySelector('#time');
+  var lastTime = '';
+  setInterval(() => {
+    const time = getTime();
+    if(time != lastTime) {
+      lastTime = time;
+      timeSpan.innerHTML = lastTime;
+    }
+  }, 1000)
 
   /**
    * テキストボックスでタブキー入力時の挙動制御
@@ -379,79 +413,4 @@ module markdowntodo {
       }
     }
   }
-
-  
-
-  export function refresh() {
-    markdownData = {
-      taskParseNum: 0,
-      todoOrSchedules: [],
-    };
-    var markdownText = document.querySelector('#editor').value.trim();
-    if(markdownText.length == 0) {
-      markdownText = document.querySelector('#editor').placeholder;
-    }
-    var html = marked(markdownText);
-    html += '<br>';
-    if(markdownData.link) {
-      html += Object.keys(markdownData.link).map(key => `<a name="${key}">${key.slice(1)}</a>. ${markdownData.link[key]}`).join('<br>')
-    } 
-    document.querySelector('#result').innerHTML = html;
-
-    console.log(markdownData);
-
-    const summary = {
-      estimate: Time.createFromTotalMinutes(markdownData.todoOrSchedules.reduce((memo, v) => memo + v.estimateTime.totalMinutes, 0)),
-      actualTime: Time.createFromTotalMinutes(markdownData.todoOrSchedules.reduce((memo, v) => memo + v.actualTime.totalMinutes, 0))
-    }
-    
-
-    document.querySelector('#todo').innerHTML = '<table><tr><th>タイトル</th><th>見積もり</th><th>区分</th><th>開始</th><th>終了</th></tr><tr>' + markdownData.todoOrSchedules
-      .filter(v => !v.isDone)
-      .map(v => {
-        const text = [
-          v.title,
-          v.estimateTime ? v.estimateTime.formatedValue() : '',
-          v.isTodo ? 'TODO' : '予定',
-          v.startTime ? v.startTime.formatedValue() : '',
-          v.endTime ? v.endTime.formatedValue() : ''
-        ].filter(v => v !== null).join('</td><td>')
-        return `<td>${text}</td>`
-      }).join('</tr><tr>') + '</tr></table>' + `<h3>残り合計: ${Time.createFromTotalMinutes(markdownData.todoOrSchedules.filter(v => !v.isDone).reduce((memo, v) => memo + v.estimateTime.totalMinutes, 0)).formatedValue()}</h3>`
-    
-
-
-    // document.querySelector('#schedule').innerHTML = markdownData.todoOrSchedules
-    //   .filter(v => !v.isTodo && !v.isDone)
-    //   .map(v => `<li>${v.title}</li>`).join('\n')
-    // console.log()
-    // mermaid.init()
-  }
 }
-
-document.querySelector('#editor').addEventListener('keydown', markdowntodo.typeTab('  ')/* スペース2つ */);
-document.querySelector('#editor').addEventListener('keydown', markdowntodo.typeEnter());
-
-
-var typeEndEventHandler = new markdowntodo.TypeEndEventHandler(markdowntodo.refresh);
-document.querySelector('#editor').addEventListener('keyup', () => {
-  typeEndEventHandler.onKeyup();
-})
-// mermaid.initialize({startOnLoad:false})
-markdowntodo.refresh();
-
-
-function getTime() {
-  return markdowntodo.Time.createFromDate(new Date()).formatedValue();
-}
-
-// 時刻表示
-const timeSpan = document.querySelector('#time');
-var lastTime = '';
-setInterval(() => {
-  const time = getTime();
-  if(time != lastTime) {
-    lastTime = time;
-    timeSpan.innerHTML = lastTime;
-  }
-}, 1000)
