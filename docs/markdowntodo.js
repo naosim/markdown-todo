@@ -1685,25 +1685,69 @@ var global = arguments[3];
     root.marked = marked;
   }
 })(this || (typeof window !== 'undefined' ? window : global));
-},{}],"LQOA":[function(require,module,exports) {
-var marked = require('marked');
+},{}],"wQNv":[function(require,module,exports) {
+"use strict";
 
-var markdownData = {
-  taskParseNum: 0,
-  todoOrSchedules: []
-};
-var markdowntodo;
+exports.__esModule = true;
+var domain;
 
-(function (markdowntodo) {
-  // marked.setOptions({ langPrefix: '' });
+(function (domain) {
+  /**
+   * 時刻 (時間, 分)
+   */
   var Time =
   /** @class */
   function () {
     function Time(hours, minutes) {
-      this.hours = hours;
-      this.minutes = minutes;
-      this.totalMinutes = hours * 60 + minutes;
+      this._hours = hours;
+      this._minutes = minutes;
+      this._totalMinutes = hours * 60 + minutes;
     }
+
+    Object.defineProperty(Time.prototype, "hours", {
+      get: function get() {
+        return this._hours;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(Time.prototype, "minutes", {
+      get: function get() {
+        return this._minutes;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(Time.prototype, "totalMinutes", {
+      get: function get() {
+        return this._totalMinutes;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(Time.prototype, "totalHours", {
+      get: function get() {
+        return this.hours + this.minutes / 60;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(Time.prototype, "formated", {
+      get: function get() {
+        return Time.zerofil2(this.hours) + ":" + Time.zerofil2(this.minutes);
+      },
+      enumerable: true,
+      configurable: true
+    });
+
+    Time.prototype.plus = function (otherTime) {
+      return Time.createFromTotalMinutes(this.totalMinutes + otherTime.totalMinutes);
+    };
+    /**
+     * 差
+     * @param otherTime { Time }
+     */
+
 
     Time.prototype.minus = function (otherTime) {
       if (this.totalMinutes < otherTime.totalMinutes) {
@@ -1723,6 +1767,10 @@ var markdowntodo;
 
     Time.createFromDate = function (date) {
       return new Time(date.getHours(), date.getMinutes());
+    };
+
+    Time.zero = function () {
+      return new Time(0, 0);
     };
 
     Time.zerofil2 = function (num) {
@@ -1751,31 +1799,88 @@ var markdowntodo;
     return Time;
   }();
 
-  markdowntodo.Time = Time;
+  domain.Time = Time;
 
   var TodoTask =
   /** @class */
   function () {
     function TodoTask(title, estimateTime, startTime, endTime) {
-      this.title = title;
-      this.startTime = startTime;
-      this.endTime = endTime;
-      this.isTodo = true;
-      this.isSchedule = false;
-      this.isDone = endTime != null;
+      this._title = title;
+      this._startTime = startTime;
+      this._endTime = endTime;
+      this._isTodo = true;
+      this._isSchedule = false;
+      this._isDone = endTime != null;
 
       if (this.startTime) {
         if (this.isDone) {
-          this.state = 'done';
+          this._state = 'done';
         } else {
-          this.state = 'doing';
+          this._state = 'doing';
         }
       } else {
-        this.state = 'todo';
+        this._state = 'todo';
       }
 
-      this.estimateTime = estimateTime;
+      this._estimateTime = estimateTime;
     }
+
+    Object.defineProperty(TodoTask.prototype, "title", {
+      get: function get() {
+        return this._title;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoTask.prototype, "startTime", {
+      get: function get() {
+        return this._startTime;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoTask.prototype, "endTime", {
+      get: function get() {
+        return this._endTime;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoTask.prototype, "isTodo", {
+      get: function get() {
+        return this._isTodo;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoTask.prototype, "isSchedule", {
+      get: function get() {
+        return this._isSchedule;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoTask.prototype, "isDone", {
+      get: function get() {
+        return this._isDone;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoTask.prototype, "estimateTime", {
+      get: function get() {
+        return this._estimateTime;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoTask.prototype, "state", {
+      get: function get() {
+        return this._state;
+      },
+      enumerable: true,
+      configurable: true
+    });
 
     TodoTask.todo = function (title, estimateTime) {
       return new TodoTask(title, estimateTime, null, null);
@@ -1792,126 +1897,245 @@ var markdowntodo;
     return TodoTask;
   }();
 
+  domain.TodoTask = TodoTask;
+
   var ScheduleTask =
   /** @class */
   function () {
     function ScheduleTask(title, startTime, endTime, isDone) {
-      this.title = title;
-      this.startTime = startTime;
-      this.endTime = endTime;
-      this.isDone = isDone;
-      this.isTodo = false;
-      this.isSchedule = true;
-      this.estimateTime = endTime.minus(startTime);
+      this._title = title;
+      this._startTime = startTime;
+      this._endTime = endTime;
+      this._isDone = isDone;
+      this._isTodo = false;
+      this._isSchedule = true;
+      this._estimateTime = endTime.minus(startTime);
     }
 
+    Object.defineProperty(ScheduleTask.prototype, "title", {
+      get: function get() {
+        return this._title;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(ScheduleTask.prototype, "startTime", {
+      get: function get() {
+        return this._startTime;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(ScheduleTask.prototype, "endTime", {
+      get: function get() {
+        return this._endTime;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(ScheduleTask.prototype, "isTodo", {
+      get: function get() {
+        return this._isTodo;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(ScheduleTask.prototype, "isSchedule", {
+      get: function get() {
+        return this._isSchedule;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(ScheduleTask.prototype, "isDone", {
+      get: function get() {
+        return this._isDone;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(ScheduleTask.prototype, "estimateTime", {
+      get: function get() {
+        return this._estimateTime;
+      },
+      enumerable: true,
+      configurable: true
+    });
     return ScheduleTask;
   }();
+
+  domain.ScheduleTask = ScheduleTask;
 
   var TodoOrSchedule =
   /** @class */
   function () {
     function TodoOrSchedule(task) {
-      this.title = task.title;
-      this.estimateTime = task.estimateTime;
-      this.startTime = task.startTime;
-      this.endTime = task.endTime;
-      this.isDone = task.isDone;
+      this._title = task.title;
+      this._estimateTime = task.estimateTime;
+      this._startTime = task.startTime;
+      this._endTime = task.endTime;
+      this._isDone = task.isDone;
 
       if (task.isTodo) {
-        this.isTodo = true;
-        this.isSchedule = false;
-        this.todo = task;
+        this._isTodo = true;
+        this._isSchedule = false;
+        this._todo = task;
       }
 
       if (task.isSchedule) {
-        this.isTodo = false;
-        this.isSchedule = true;
-        this.schedule = task;
+        this._isTodo = false;
+        this._isSchedule = true;
+        this._schedule = task;
       }
 
-      this.actualTime = this.isDone ? this.endTime.minus(this.startTime) : new Time(0, 0);
+      this._actualTime = this.isDone ? this.endTime.minus(this.startTime) : new Time(0, 0);
     }
 
+    Object.defineProperty(TodoOrSchedule.prototype, "title", {
+      get: function get() {
+        return this._title;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoOrSchedule.prototype, "startTime", {
+      get: function get() {
+        return this._startTime;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoOrSchedule.prototype, "endTime", {
+      get: function get() {
+        return this._endTime;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoOrSchedule.prototype, "isTodo", {
+      get: function get() {
+        return this._isTodo;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoOrSchedule.prototype, "isSchedule", {
+      get: function get() {
+        return this._isSchedule;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoOrSchedule.prototype, "isDone", {
+      get: function get() {
+        return this._isDone;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoOrSchedule.prototype, "estimateTime", {
+      get: function get() {
+        return this._estimateTime;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoOrSchedule.prototype, "actualTime", {
+      get: function get() {
+        return this._actualTime;
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoOrSchedule.prototype, "todo", {
+      get: function get() {
+        if (this._todo) {
+          return this._todo;
+        } else {
+          throw new Error('todo is null');
+        }
+      },
+      enumerable: true,
+      configurable: true
+    });
+    Object.defineProperty(TodoOrSchedule.prototype, "schedule", {
+      get: function get() {
+        if (this._schedule) {
+          return this._schedule;
+        } else {
+          throw new Error('schedule is null');
+        }
+      },
+      enumerable: true,
+      configurable: true
+    });
     return TodoOrSchedule;
   }();
 
-  markdowntodo.TodoOrSchedule = TodoOrSchedule;
+  domain.TodoOrSchedule = TodoOrSchedule;
+})(domain = exports.domain || (exports.domain = {}));
 
-  function parse(text) {
-    var args = text.split('//')[0].split('<del>').join('').split('</del>').join('').split('|');
-    var title = args[0].trim();
-    var ary = args[1].split(' ').map(function (v) {
-      return v.trim();
-    }).filter(function (v) {
-      return v.length > 0;
-    }); // console.log(ary);
+var marked = require('marked');
 
-    if (ary[0].indexOf('-') != -1) {
-      // スケジュール
-      var times = ary[0].split('-').map(function (v) {
-        return v.indexOf(':') != -1 ? v : v + ":00";
-      }).map(function (v) {
-        return Time.parse(v);
-      });
-      var isDone = ary.length >= 2 && ary[1] == 'done';
-      return new TodoOrSchedule(new ScheduleTask(title, times[0], times[1], isDone));
-    } else {
-      // タスク
-      var estimateTime = void 0;
-      var startTime = void 0;
-      var endTime = void 0;
+var markdownData = {
+  taskParseNum: 0,
+  todoOrSchedules: []
+};
 
-      if (ary.length >= 1) {
-        estimateTime = Time.parse(ary[0]);
-      }
+function parse(text) {
+  var args = text.split('//')[0].split('<del>').join('').split('</del>').join('').split('|');
+  var title = args[0].trim();
+  var ary = args[1].split(' ').map(function (v) {
+    return v.trim();
+  }).filter(function (v) {
+    return v.length > 0;
+  }); // console.log(ary);
 
-      if (ary.length >= 2) {
-        startTime = Time.parse(ary[1]);
-      }
+  if (ary[0].indexOf('-') != -1) {
+    // スケジュール
+    var times = ary[0].split('-').map(function (v) {
+      return v.indexOf(':') != -1 ? v : v + ":00";
+    }).map(function (v) {
+      return domain.Time.parse(v);
+    });
+    var isDone = ary.length >= 2 && ary[1] == 'done';
+    return new domain.TodoOrSchedule(new domain.ScheduleTask(title, times[0], times[1], isDone));
+  } else {
+    // タスク
+    var estimateTime = void 0;
+    var startTime = void 0;
+    var endTime = void 0;
 
-      if (ary.length >= 3) {
-        endTime = Time.parse(ary[2]);
-      }
+    if (ary.length >= 1) {
+      estimateTime = domain.Time.parse(ary[0]);
+    }
 
-      if (ary.length == 1) {
-        // todo
-        return new TodoOrSchedule(TodoTask.todo(title, estimateTime));
-      }
+    if (ary.length >= 2) {
+      startTime = domain.Time.parse(ary[1]);
+    }
 
-      if (ary.length == 2) {
-        // doing
-        return new TodoOrSchedule(TodoTask.doing(title, estimateTime, startTime));
-      }
+    if (ary.length >= 3) {
+      endTime = domain.Time.parse(ary[2]);
+    }
 
-      if (ary.length == 3) {
-        // done
-        return new TodoOrSchedule(TodoTask.done(title, estimateTime, startTime, endTime));
-      }
+    if (ary.length == 1) {
+      // todo
+      return new domain.TodoOrSchedule(domain.TodoTask.todo(title, estimateTime));
+    }
+
+    if (ary.length == 2) {
+      // doing
+      return new domain.TodoOrSchedule(domain.TodoTask.doing(title, estimateTime, startTime));
+    }
+
+    if (ary.length == 3) {
+      // done
+      return new domain.TodoOrSchedule(domain.TodoTask.done(title, estimateTime, startTime, endTime));
     }
   }
+}
 
-  var renderer = new marked.Renderer();
-
-  renderer.code = function (code, lang) {
-    if (lang == 'html-exec') {
-      return code;
-    }
-
-    if (lang == 'mermaid') {
-      return "<div class=\"mermaid\">" + code + "</div>";
-    }
-
-    return '<pre><code>' + hljs.highlightAuto(code).value + '</code></pre>';
-  };
-
-  renderer.defaultParagraph = renderer.paragraph;
-
-  renderer.paragraph = function (text) {
-    // console.log('paragraph', text);
-    return renderer.defaultParagraph(text);
-  };
-
+function createRenderer(renderer) {
   renderer.defaultHeading = renderer.heading;
 
   renderer.heading = function (text, level, raw, slugger) {
@@ -1920,12 +2144,6 @@ var markdowntodo;
     }
 
     return renderer.defaultHeading(text, level, raw, slugger);
-  };
-
-  renderer.defaultList = renderer.list;
-
-  renderer.list = function (body, ordered, start) {
-    return renderer.defaultList(body, ordered, start);
   };
 
   renderer.defaultListitem = renderer.listitem;
@@ -1951,233 +2169,33 @@ var markdowntodo;
     return renderer.defaultListitem(text, task, checked);
   };
 
-  renderer.defaultLink = renderer.link;
+  return renderer;
+}
 
-  renderer.link = function (href, title, text) {
-    // console.log(href, title, text);
-    if (href == '$d') {
-      // 日付
-      var d = text.split('/').join('-');
-      return "<time datetime=\"" + d + "\">" + text + "</time>";
-    }
+var renderer = createRenderer(new marked.Renderer());
+marked.setOptions({
+  renderer: renderer
+});
 
-    if (href == '$eval') {
-      return eval(text);
-    }
+function createMarkdownTodo(markdownText) {
+  markdownData = {
+    taskParseNum: 0,
+    todoOrSchedules: []
+  };
+  marked(markdownText);
+  var summary = {
+    estimate: markdownData.todoOrSchedules.reduce(function (memo, v) {
+      return memo.plus(v.estimateTime);
+    }, domain.Time.zero()),
+    actual: markdownData.todoOrSchedules.reduce(function (memo, v) {
+      return memo.plus(v.actualTime);
+    }, domain.Time.zero())
+  };
+  return {
+    todoOrSchedules: markdownData.todoOrSchedules,
+    summary: summary
+  };
+}
 
-    if (text.indexOf('^$') == 0) {
-      // 変数
-      return href;
-    }
-
-    if (text.indexOf('^') == 0) {
-      // 脚注
-      if (!markdownData.link) {
-        markdownData.link = {};
-      }
-
-      markdownData.link[text] = href;
-      return "<sup><a href=\"#" + text + "\" title=\"" + href + "\">" + text.slice(1) + "</a></sup>";
-    }
-
-    return renderer.defaultLink(href, title, text);
-  }; // renderer.image = function(href, title, text) {
-  //   console.log(href, title, text);
-  //   return `<img src="${href}" />`
-  // }
-
-
-  marked.setOptions({
-    renderer: renderer
-  });
-  /**
-   * だいたいキー入力が終わったタイミングを知らせる
-   */
-
-  var TypeEndEventHandler =
-  /** @class */
-  function () {
-    function TypeEndEventHandler(callback) {
-      this.callback = callback;
-      this.keyupEventList = [];
-    }
-
-    TypeEndEventHandler.prototype.onKeyup = function () {
-      var _this = this;
-
-      this.keyupEventList.push(true);
-      setTimeout(function () {
-        if (_this.keyupEventList.length > 0) {
-          _this.keyupEventList.pop();
-        }
-
-        if (_this.keyupEventList.length == 0) {
-          _this.callback();
-        }
-      }, 1000); // 入力終了までの待ち時間
-    };
-
-    return TypeEndEventHandler;
-  }();
-
-  markdowntodo.TypeEndEventHandler = TypeEndEventHandler;
-  /**
-   * テキストボックスでタブキー入力時の挙動制御
-   * keydownイベント発生時に設定する
-   * @param {string} text タブキー入力時に挿入するテキスト。省略時はタブを入力する。
-   */
-
-  function typeTab(text) {
-    text = text || '\t';
-    var textLength = text.length;
-    return function (e) {
-      var elem, end, start, value;
-
-      if (e.keyCode === 9) {
-        if (e.preventDefault) {
-          e.preventDefault();
-        }
-
-        elem = e.target;
-        start = elem.selectionStart;
-        end = elem.selectionEnd;
-        value = elem.value;
-        elem.value = "" + value.substring(0, start) + text + value.substring(end);
-        elem.selectionStart = elem.selectionEnd = start + textLength;
-        return false;
-      }
-    };
-  }
-
-  markdowntodo.typeTab = typeTab;
-
-  function whiteSpacePrefix(text) {
-    var result = '';
-    var i = 0;
-
-    while (i < text.length) {
-      if (text[i] == ' ') {
-        result += ' ';
-      } else if (text[i] == '　') {
-        // 全角スペース
-        result += '　';
-      } else {
-        return result;
-      }
-
-      i++;
-    }
-
-    return result;
-  }
-  /**
-   * テキストボックスエンターキー入力時の挙動制御
-   * keydownイベント発生時に設定する
-   * 行頭のインデントを揃える
-   */
-
-
-  function typeEnter() {
-    return function (e) {
-      var elem, end, start, value;
-
-      if (e.keyCode === 13) {
-        if (e.preventDefault) {
-          e.preventDefault();
-        }
-
-        elem = e.target;
-        start = elem.selectionStart;
-        end = elem.selectionEnd;
-        value = elem.value;
-        var beforeText = value.substring(0, start);
-        var lastLine = beforeText.slice(beforeText.lastIndexOf('\n') + 1);
-        var whiteSpace = whiteSpacePrefix(lastLine);
-        var insertText = '\n' + whiteSpace;
-        elem.value = "" + beforeText + insertText + value.substring(end);
-        elem.selectionStart = elem.selectionEnd = start + insertText.length;
-        return false;
-      }
-    };
-  }
-
-  markdowntodo.typeEnter = typeEnter;
-
-  function refresh() {
-    markdownData = {
-      taskParseNum: 0,
-      todoOrSchedules: []
-    };
-    var markdownText = document.querySelector('#editor').value.trim();
-
-    if (markdownText.length == 0) {
-      markdownText = document.querySelector('#editor').placeholder;
-    }
-
-    var html = marked(markdownText);
-    html += '<br>';
-
-    if (markdownData.link) {
-      html += Object.keys(markdownData.link).map(function (key) {
-        return "<a name=\"" + key + "\">" + key.slice(1) + "</a>. " + markdownData.link[key];
-      }).join('<br>');
-    }
-
-    document.querySelector('#result').innerHTML = html;
-    console.log(markdownData);
-    var summary = {
-      estimate: Time.createFromTotalMinutes(markdownData.todoOrSchedules.reduce(function (memo, v) {
-        return memo + v.estimateTime.totalMinutes;
-      }, 0)),
-      actualTime: Time.createFromTotalMinutes(markdownData.todoOrSchedules.reduce(function (memo, v) {
-        return memo + v.actualTime.totalMinutes;
-      }, 0))
-    };
-    document.querySelector('#todo').innerHTML = '<table><tr><th>タイトル</th><th>見積もり</th><th>区分</th><th>開始</th><th>終了</th></tr><tr>' + markdownData.todoOrSchedules.filter(function (v) {
-      return !v.isDone;
-    }).map(function (v) {
-      var text = [v.title, v.estimateTime ? v.estimateTime.formatedValue() : '', v.isTodo ? 'TODO' : '予定', v.startTime ? v.startTime.formatedValue() : '', v.endTime ? v.endTime.formatedValue() : ''].filter(function (v) {
-        return v !== null;
-      }).join('</td><td>');
-      return "<td>" + text + "</td>";
-    }).join('</tr><tr>') + '</tr></table>' + ("<h3>\u6B8B\u308A\u5408\u8A08: " + Time.createFromTotalMinutes(markdownData.todoOrSchedules.filter(function (v) {
-      return !v.isDone;
-    }).reduce(function (memo, v) {
-      return memo + v.estimateTime.totalMinutes;
-    }, 0)).formatedValue() + "</h3>"); // document.querySelector('#schedule').innerHTML = markdownData.todoOrSchedules
-    //   .filter(v => !v.isTodo && !v.isDone)
-    //   .map(v => `<li>${v.title}</li>`).join('\n')
-    // console.log()
-    // mermaid.init()
-  }
-
-  markdowntodo.refresh = refresh;
-})(markdowntodo || (markdowntodo = {}));
-
-document.querySelector('#editor').addEventListener('keydown', markdowntodo.typeTab('  ')
-/* スペース2つ */
-);
-document.querySelector('#editor').addEventListener('keydown', markdowntodo.typeEnter());
-var typeEndEventHandler = new markdowntodo.TypeEndEventHandler(markdowntodo.refresh);
-document.querySelector('#editor').addEventListener('keyup', function () {
-  typeEndEventHandler.onKeyup();
-}); // mermaid.initialize({startOnLoad:false})
-
-markdowntodo.refresh();
-
-function getTime() {
-  return markdowntodo.Time.createFromDate(new Date()).formatedValue();
-} // 時刻表示
-
-
-var timeSpan = document.querySelector('#time');
-var lastTime = '';
-setInterval(function () {
-  var time = getTime();
-
-  if (time != lastTime) {
-    lastTime = time;
-    timeSpan.innerHTML = lastTime;
-  }
-}, 1000);
-},{"marked":"3F7m"}]},{},["LQOA"], null)
+exports.createMarkdownTodo = createMarkdownTodo;
+},{"marked":"3F7m"}]},{},["wQNv"], "markdowntodo")

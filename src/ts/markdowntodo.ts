@@ -1,12 +1,4 @@
-export module markdowntodo {
-  declare function require(x: string): any;
-  const marked = require('marked')
-
-  var markdownData: {taskParseNum:number, todoOrSchedules: markdowntodo.TodoOrSchedule[]} = { 
-    taskParseNum: 0, // 0:初期 1:タスクパース中 2:パース完了
-    todoOrSchedules: [],
-  };
-
+export module domain {
   /**
    * 時刻 (時間, 分)
    */
@@ -199,99 +191,109 @@ export module markdowntodo {
     
   }
 
-  function parse(text: string): TodoOrSchedule {
-    var args = text.split('//')[0].split('<del>').join('').split('</del>').join('').split('|');
-    var title = args[0].trim();
-    var ary = args[1].split(' ').map(v => v.trim()).filter(v => v.length > 0);
-    // console.log(ary);
-    if(ary[0].indexOf('-') != -1) {// スケジュール
-      let times = ary[0].split('-').map(v => v.indexOf(':') != -1 ? v : `${v}:00`).map(v => Time.parse(v))
-      let isDone = ary.length >= 2 && ary[1] == 'done'
-      return new TodoOrSchedule(new ScheduleTask(title, times[0], times[1], isDone));
-    } else {// タスク
-      let estimateTime;
-      let startTime;
-      let endTime;
-      if(ary.length >= 1) {
-        estimateTime = Time.parse(ary[0]);
-      }
-      if(ary.length >= 2) {
-        startTime = Time.parse(ary[1]);
-      }
-      if(ary.length >= 3) {
-        endTime = Time.parse(ary[2]);
-      }
-
-      if(ary.length == 1) {// todo
-        return new TodoOrSchedule(TodoTask.todo(title, estimateTime));
-      }
-      if(ary.length == 2) {// doing
-        return new TodoOrSchedule(TodoTask.doing(title, estimateTime, startTime));
-      }
-      if(ary.length == 3) {// done
-        return new TodoOrSchedule(TodoTask.done(title, estimateTime, startTime, endTime));
-      }
-    }
-    
-  }
-
-  export function createRenderer(renderer: any): any {
-    renderer.defaultHeading = renderer.heading;
-    renderer.heading = function(text, level, raw, slugger) {
-      if(markdownData.taskParseNum == 1) {
-        markdownData.taskParseNum = 2;
-      }
-      return renderer.defaultHeading(text, level, raw, slugger);
-    }
-
-    renderer.defaultListitem = renderer.listitem;
-    renderer.listitem = function(text, task, checked) {
-      if(markdownData.taskParseNum == 0) {
-        markdownData.taskParseNum = 1;
-      }
-      if(markdownData.taskParseNum < 2) {
-        if(text.split('//')[0].indexOf('|') != -1) {
-          try {
-            var taskOrSchedule: TodoOrSchedule = parse(text);
-            markdownData.todoOrSchedules.push(taskOrSchedule);
-            return renderer.defaultListitem(text, task, checked)
-          } catch(e) {
-            console.error(e);
-            return renderer.defaultListitem(text, task, checked)
-          }
-          
-        }
-      }
-
-      return renderer.defaultListitem(text, task, checked)
-    }
-
-    return renderer;
-  }
-
   export interface MarkdownTodo {
     todoOrSchedules: TodoOrSchedule[],
     summary: {estimate: Time, actual: Time}
   }
+}
+declare function require(x: string): any;
+const marked = require('marked')
 
-  export function createMarkdownTodo(markdownText: string): MarkdownTodo {
-    markdownData = {
-      taskParseNum: 0,
-      todoOrSchedules: [],
-    };
-    marked(markdownText);
-    
-    const summary = {
-      estimate: markdownData.todoOrSchedules.reduce((memo, v) => memo.plus(v.estimateTime), Time.zero()),
-      actual: markdownData.todoOrSchedules.reduce((memo, v) => memo.plus(v.actualTime), Time.zero())
+var markdownData: {taskParseNum:number, todoOrSchedules: domain.TodoOrSchedule[]} = { 
+  taskParseNum: 0, // 0:初期 1:タスクパース中 2:パース完了
+  todoOrSchedules: [],
+};
+
+
+
+function parse(text: string): domain.TodoOrSchedule {
+  var args = text.split('//')[0].split('<del>').join('').split('</del>').join('').split('|');
+  var title = args[0].trim();
+  var ary = args[1].split(' ').map(v => v.trim()).filter(v => v.length > 0);
+  // console.log(ary);
+  if(ary[0].indexOf('-') != -1) {// スケジュール
+    let times = ary[0].split('-').map(v => v.indexOf(':') != -1 ? v : `${v}:00`).map(v => domain.Time.parse(v))
+    let isDone = ary.length >= 2 && ary[1] == 'done'
+    return new domain.TodoOrSchedule(new domain.ScheduleTask(title, times[0], times[1], isDone));
+  } else {// タスク
+    let estimateTime;
+    let startTime;
+    let endTime;
+    if(ary.length >= 1) {
+      estimateTime = domain.Time.parse(ary[0]);
+    }
+    if(ary.length >= 2) {
+      startTime = domain.Time.parse(ary[1]);
+    }
+    if(ary.length >= 3) {
+      endTime = domain.Time.parse(ary[2]);
     }
 
-    return {
-      todoOrSchedules: markdownData.todoOrSchedules,
-      summary: summary
+    if(ary.length == 1) {// todo
+      return new domain.TodoOrSchedule(domain.TodoTask.todo(title, estimateTime));
+    }
+    if(ary.length == 2) {// doing
+      return new domain.TodoOrSchedule(domain.TodoTask.doing(title, estimateTime, startTime));
+    }
+    if(ary.length == 3) {// done
+      return new domain.TodoOrSchedule(domain.TodoTask.done(title, estimateTime, startTime, endTime));
     }
   }
+  
+}
 
-  const renderer = markdowntodo.createRenderer(new marked.Renderer());
-  marked.setOptions({ renderer: renderer });
+function createRenderer(renderer: any): any {
+  renderer.defaultHeading = renderer.heading;
+  renderer.heading = function(text, level, raw, slugger) {
+    if(markdownData.taskParseNum == 1) {
+      markdownData.taskParseNum = 2;
+    }
+    return renderer.defaultHeading(text, level, raw, slugger);
+  }
+
+  renderer.defaultListitem = renderer.listitem;
+  renderer.listitem = function(text, task, checked) {
+    if(markdownData.taskParseNum == 0) {
+      markdownData.taskParseNum = 1;
+    }
+    if(markdownData.taskParseNum < 2) {
+      if(text.split('//')[0].indexOf('|') != -1) {
+        try {
+          var taskOrSchedule: domain.TodoOrSchedule = parse(text);
+          markdownData.todoOrSchedules.push(taskOrSchedule);
+          return renderer.defaultListitem(text, task, checked)
+        } catch(e) {
+          console.error(e);
+          return renderer.defaultListitem(text, task, checked)
+        }
+        
+      }
+    }
+
+    return renderer.defaultListitem(text, task, checked)
+  }
+
+  return renderer;
+}
+
+const renderer = createRenderer(new marked.Renderer());
+marked.setOptions({ renderer: renderer });
+
+
+export function createMarkdownTodo(markdownText: string): domain.MarkdownTodo {
+  markdownData = {
+    taskParseNum: 0,
+    todoOrSchedules: [],
+  };
+  marked(markdownText);
+  
+  const summary = {
+    estimate: markdownData.todoOrSchedules.reduce((memo, v) => memo.plus(v.estimateTime), domain.Time.zero()),
+    actual: markdownData.todoOrSchedules.reduce((memo, v) => memo.plus(v.actualTime), domain.Time.zero())
+  }
+
+  return {
+    todoOrSchedules: markdownData.todoOrSchedules,
+    summary: summary
+  }
 }

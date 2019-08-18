@@ -1,4 +1,5 @@
-import { markdowntodo } from './markdowntodo'
+import * as markdowntodo  from './markdowntodo'
+const domain = markdowntodo.domain;
 
 module view {
   const editorElement = document.querySelector('#editor') as HTMLInputElement
@@ -16,7 +17,7 @@ module view {
           v.endTime ? v.endTime.formated : ''
         ].filter(v => v !== null).join('</td><td>')
         return `<td>${text}</td>`
-      }).join('</tr><tr>') + '</tr></table>' + `<h3>残り合計: ${markdowntodo.Time.createFromTotalMinutes(markdownTodo.todoOrSchedules.filter(v => !v.isDone).reduce((memo, v) => memo + v.estimateTime.totalMinutes, 0)).totalHours}h</h3>`
+      }).join('</tr><tr>') + '</tr></table>' + `<h3>残り合計: ${domain.Time.createFromTotalMinutes(markdownTodo.todoOrSchedules.filter(v => !v.isDone).reduce((memo, v) => memo + v.estimateTime.totalMinutes, 0)).totalHours}h</h3>`
   }
 
   /**
@@ -43,7 +44,7 @@ module view {
   }
 
   function getTime() {
-    return markdowntodo.Time.createFromDate(new Date()).formatedValue();
+    return domain.Time.createFromDate(new Date()).formatedValue();
   }
 
   /**
